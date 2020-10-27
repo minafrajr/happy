@@ -1,4 +1,5 @@
 import React, { ChangeEvent, FormEvent, useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import { Map, Marker, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
 import { LeafletMouseEvent } from 'leaflet';
@@ -9,6 +10,7 @@ import mapMarkerImg from '../images/map-marker.svg';
 
 import '../styles/pages/create-orphanage.css';
 import Sidebar from '../components/Sidebar';
+import api from '../services/api';
 
 const happyMapIcon = L.icon({
   iconUrl: mapMarkerImg,
@@ -27,6 +29,7 @@ export default function CreateOrphanage() {
   const [opening_hours, setOpeningHours] = useState('');
   const [open_on_weekends, setOpenOnWeekends] = useState(true);
   const [images, setImages] = useState<File[]>([]);
+  const hystory = useHistory();
   const [previewImages, setPreviewImages] = useState<string[]>([]);
 
   function handleMapClick(event: LeafletMouseEvent) {
@@ -34,6 +37,7 @@ export default function CreateOrphanage() {
 
     setPosition({ latitude: lat, longitude: lng });
   }
+
   function handleSelectImages(event: ChangeEvent<HTMLInputElement>) {
     if (!event.target.files) {
       return;
@@ -51,19 +55,32 @@ export default function CreateOrphanage() {
     console.log(event.target.files);
   }
 
-  function handleSubmit(event: FormEvent) {
-    const { latitude, longitude } = position;
-
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
-    console.log({
-      position,
-      name,
-      about,
-      opening_hours,
-      instructions,
-      open_on_weekends,
+    const { latitude, longitude } = position;
+
+    const data = new FormData();
+
+    data.append('name', name);
+    data.append('about', about);
+    data.append('latitude', String(latitude));
+    data.append('longitude', String(longitude));
+    data.append('instructions', instructions);
+    data.append('opening_hours', opening_hours);
+    data.append('open_on_weekends', String(open_on_weekends));
+
+    images.forEach((image) => {
+      data.append('images', image);
     });
+
+    try {
+      await api.post('orphanages', data);
+      alert('Cadastro realizado com sucesso!');
+      hystory.push('/app');
+    } catch (error) {
+      console.log(`${error.message}`);
+    }
   }
 
   return (
@@ -148,6 +165,7 @@ export default function CreateOrphanage() {
                 id="instructions"
                 value={instructions}
                 onChange={(event) => setInstructions(event.target.value)}
+                maxLength={300}
               />
             </div>
 
